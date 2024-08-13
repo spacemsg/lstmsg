@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SpaceMSG - Мессенджер</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        :root {
+            --primary-color: #0077cc;
+            --primary-color-hover: #005599;
+        }
+
+        html, body {
+            overflow: hidden; /* Запрещаем прокрутку страницы */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1a1a1a;
+            margin: 0;
+            padding: 0;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            height: 100vh;
+            padding-bottom: 70px; /* Добавляем отступ снизу */
+        }
+        #logo {
+            writing-mode: vertical-rl; /* Вертикальное выравнивание текста */
+            text-orientation: mixed;
+            font-size: 190px; /* Увеличенный размер шрифта */
+            color: var(--primary-color);
+            position: fixed;
+            right: -50px; /* Расположение справа */
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        #header {
+            text-align: center;
+            margin-top: 20px;
+        }
+        #header h1 {
+            font-size: 48px;
+            color: var(--primary-color);
+            margin: 0;
+        }
+        #header p {
+            font-size: 24px;
+            color: #ccc;
+            margin: 0;
+        }
+        #messages {
+            background-color: #333;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            width: 90%;
+            max-width: 600px;
+            max-height: 800px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column-reverse;
+        }
+        #messages div {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #444;
+        }
+        /* Стили для скроллбара */
+        #messages::-webkit-scrollbar {
+            width: 10px;
+        }
+        #messages::-webkit-scrollbar-track {
+            background: #555;
+            border-radius: 5px;
+        }
+        #messages::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 5px;
+        }
+        #messages::-webkit-scrollbar-thumb:hover {
+            background: #aaa;
+        }
+        form {
+            display: flex;
+            width: 80%;
+            max-width: 620px;
+            position: fixed;
+            bottom: 20px; /* Фиксируем форму на 20px выше от нижнего края */
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #333;
+            padding: 10px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid var(--primary-color);
+            border-radius: 5px 0 0 5px;
+            background-color: #444;
+            color: #fff;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            background-color: var(--primary-color);
+            color: #fff;
+            border-radius: 0 5px 5px 0;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: var(--primary-color-hover);
+        }
+        #image {
+            position: fixed;
+            left: 0px;
+            top: 70%;
+            transform: translateY(-50%);
+            max-width: 770px;
+            max-height: 100vh;
+        }
+        .logout-btn, .show-users-btn, .color-picker-btn {
+            position: fixed;
+            background-color: var(--primary-color);
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            text-decoration: none;
+            font-size: 16px;
+        }
+        .logout-btn:hover, .show-users-btn:hover, .color-picker-btn:hover {
+            background-color: var(--primary-color-hover);
+        }
+        .logout-btn {
+            left: 10px;
+            top: 10px;
+            padding: 10px 117px;
+        }
+        .show-users-btn {
+            left: 10px;
+            top: 60px;
+            padding: 12px 20px;
+        }
+        .color-picker-btn {
+            left: 10px;
+            top: 110px;
+            padding: 11.5px 85px;
+        }
+        #online-users {
+            position: fixed;
+            top: 10px;
+            left: 300px;
+            color: var(--primary-color);
+            font-size: 18px;
+            display: none; /* Скрываем список по умолчанию */
+            background-color: #333;
+            padding: 10px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        #online-users ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        #online-users li {
+            margin-bottom: 5px;
+        }
+        .color-picker {
+            position: fixed;
+            top: 150px;
+            left: 10px;
+            padding: 10px;
+            background-color: #333;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            display: none;
+            z-index: 1000;
+        }
+        .color-picker .color-option {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            margin: 5px;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        .color-picker .color-option:hover {
+            border: 2px solid #fff;
+        }
+    </style>
+    <script type="text/javascript" charset="utf-8">
+        document.addEventListener('DOMContentLoaded', (event) => {
+            var socket = io.connect('http://' + document.domain + ':' + location.port);
+            var audio = new Audio('/static/notification.mp3');
+            var username = '{{ session.get("username", "Anonymous") }}';
+
+            socket.on('connect', function() {
+                socket.emit('join', {room: 'chat'});
+            });
+
+            socket.on('new_message', function(msg) {
+                var messages = document.getElementById('messages');
+                var message = document.createElement('div');
+                message.textContent = msg.message;
+                messages.insertBefore(message, messages.firstChild); // Insert at the top
+                messages.scrollTop = messages.scrollHeight; // Scroll to the latest message
+
+                // Проверяем, является ли текущий пользователь отправителем сообщения
+                if (!msg.message.startsWith(username + ':')) {
+                    audio.play(); // Play the notification sound
+                }
+            });
+
+            socket.on('update_online_users', function(data) {
+                var usersList = document.getElementById('online-users-list');
+                usersList.innerHTML = '';
+                data.users.forEach(function(user) {
+                    var li = document.createElement('li');
+                    li.textContent = user;
+                    usersList.appendChild(li);
+                });
+            });
+
+            document.getElementById('message-form').addEventListener('submit', function(event) {
+                event.preventDefault();
+                var message = document.getElementById('message').value;
+                if (message.trim()) {
+                    fetch('/send_message', {
+                        method: 'POST',
+                        body: new URLSearchParams({message: message}),
+                        headers: {'Content-Type': 'application/x-www-form-urlencoded'}
+                    }).then(response => {
+                        if (response.ok) {
+                            document.getElementById('message').value = '';
+                        }
+                    });
+                }
+            });
+
+            document.getElementById('show-users-btn').addEventListener('click', function() {
+                var onlineUsers = document.getElementById('online-users');
+                if (onlineUsers.style.display === 'none' || onlineUsers.style.display === '') {
+                    onlineUsers.style.display = 'block';
+                } else {
+                    onlineUsers.style.display = 'none';
+                }
+            });
+
+            document.getElementById('color-picker-btn').addEventListener('click', function() {
+                var colorPicker = document.getElementById('color-picker');
+                if (colorPicker.style.display === 'none' || colorPicker.style.display === '') {
+                    colorPicker.style.display = 'block';
+                } else {
+                    colorPicker.style.display = 'none';
+                }
+            });
+
+            document.querySelectorAll('.color-option').forEach(function(option) {
+                option.addEventListener('click', function() {
+                    var color = option.style.backgroundColor;
+                    document.documentElement.style.setProperty('--primary-color', color);
+                    document.documentElement.style.setProperty('--primary-color-hover', getHoverColor(color));
+                    localStorage.setItem('primaryColor', color);
+                });
+            });
+
+            function getHoverColor(color) {
+                switch (color) {
+                    case '#ff0000': return '#cc0000'; // Red
+                    case '#ff69b4': return '#ff1493'; // Pink
+                    case '#008000': return '#006400'; // Green
+                    case '#800080': return '#4b0082'; // Purple
+                    case '#808080': return '#696969'; // Gray
+                    default: return '#005599'; // Default blue
+                }
+            }
+
+            // Load saved color from localStorage
+            var savedColor = localStorage.getItem('primaryColor');
+            if (savedColor) {
+                document.documentElement.style.setProperty('--primary-color', savedColor);
+                document.documentElement.style.setProperty('--primary-color-hover', getHoverColor(savedColor));
+            }
+        });
+    </script>
+</head>
+<body>
+    <div id="logo">SpaceMSG</div>
+    <div id="header">
+        <h1>Безопасный мессенджер</h1>
+        <p>Безопасная и приватная платформа для обмена сообщениями</p>
+    </div>
+    <a href="{{ url_for('logout') }}" class="logout-btn">Выйти</a>
+    <button id="show-users-btn" class="show-users-btn">Показать онлайн пользователей</button>
+    <button id="color-picker-btn" class="color-picker-btn">Изменить цвет</button>
+    <div id="online-users">
+        <h2>Онлайн пользователи</h2>
+        <ul id="online-users-list">
+            {% for user in connected_users %}
+                <li>{{ user }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    <div id="messages">
+        {% for message in decrypted_messages %}
+            <div>{{ message }}</div>
+        {% endfor %}
+    </div>
+    <form id="message-form">
+        <input type="text" id="message" name="message" placeholder="Введите здесь сообщение..." required>
+        <button type="submit">Отправить</button>
+    </form>
+    <img id="image" src="https://gas-kvas.com/grafic/uploads/posts/2024-01/gas-kvas-com-p-belii-kot-na-prozrachnom-fone-28.png" alt="Description of the image">
+    <div class="color-picker" id="color-picker">
+        <div class="color-option" style="background-color: #0077cc;"></div>
+        <div class="color-option" style="background-color: #ff0000;"></div>
+        <div class="color-option" style="background-color: #ff69b4;"></div>
+        <div class="color-option" style="background-color: #008000;"></div>
+        <div class="color-option" style="background-color: #800080;"></div>
+        <div class="color-option" style="background-color: #808080;"></div>
+    </div>
+</body>
+</html>
